@@ -47,12 +47,21 @@ function createServer(
           throw new Error("No arguments provided");
         }
 
+        // Some MCP clients serialize complex params (arrays/objects) as JSON strings.
+        // Auto-parse any string value that looks like JSON.
+        const rawArgs = request.params.arguments;
+        for (const key of Object.keys(rawArgs)) {
+          const val = rawArgs[key];
+          if (typeof val === "string" && (val.startsWith("[") || val.startsWith("{"))) {
+            try { rawArgs[key] = JSON.parse(val); } catch {}
+          }
+        }
+
         let response;
 
         switch (request.params.name) {
           case "notion_append_block_children": {
-            const args = request.params
-              .arguments as unknown as args.AppendBlockChildrenArgs;
+            const args = rawArgs as unknown as args.AppendBlockChildrenArgs;
             if (!args.block_id || !args.children) {
               throw new Error(
                 "Missing required arguments: block_id and children"
@@ -67,8 +76,7 @@ function createServer(
           }
 
           case "notion_retrieve_block": {
-            const args = request.params
-              .arguments as unknown as args.RetrieveBlockArgs;
+            const args = rawArgs as unknown as args.RetrieveBlockArgs;
             if (!args.block_id) {
               throw new Error("Missing required argument: block_id");
             }
@@ -77,8 +85,7 @@ function createServer(
           }
 
           case "notion_retrieve_block_children": {
-            const args = request.params
-              .arguments as unknown as args.RetrieveBlockChildrenArgs;
+            const args = rawArgs as unknown as args.RetrieveBlockChildrenArgs;
             if (!args.block_id) {
               throw new Error("Missing required argument: block_id");
             }
@@ -91,8 +98,7 @@ function createServer(
           }
 
           case "notion_delete_block": {
-            const args = request.params
-              .arguments as unknown as args.DeleteBlockArgs;
+            const args = rawArgs as unknown as args.DeleteBlockArgs;
             if (!args.block_id) {
               throw new Error("Missing required argument: block_id");
             }
@@ -101,8 +107,7 @@ function createServer(
           }
 
           case "notion_update_block": {
-            const args = request.params
-              .arguments as unknown as args.UpdateBlockArgs;
+            const args = rawArgs as unknown as args.UpdateBlockArgs;
             if (!args.block_id || !args.block) {
               throw new Error("Missing required arguments: block_id and block");
             }
@@ -114,8 +119,7 @@ function createServer(
           }
 
           case "notion_retrieve_page": {
-            const args = request.params
-              .arguments as unknown as args.RetrievePageArgs;
+            const args = rawArgs as unknown as args.RetrievePageArgs;
             if (!args.page_id) {
               throw new Error("Missing required argument: page_id");
             }
@@ -124,8 +128,7 @@ function createServer(
           }
 
           case "notion_update_page_properties": {
-            const args = request.params
-              .arguments as unknown as args.UpdatePagePropertiesArgs;
+            const args = rawArgs as unknown as args.UpdatePagePropertiesArgs;
             if (!args.page_id || !args.properties) {
               throw new Error(
                 "Missing required arguments: page_id and properties"
@@ -139,8 +142,7 @@ function createServer(
           }
 
           case "notion_create_page": {
-            const a = request.params
-              .arguments as unknown as args.CreatePageArgs;
+            const a = rawArgs as unknown as args.CreatePageArgs;
             if (!a.parent_id || !a.title) {
               throw new Error(
                 "Missing required arguments: parent_id and title"
@@ -158,8 +160,7 @@ function createServer(
           }
 
           case "notion_list_all_users": {
-            const args = request.params
-              .arguments as unknown as args.ListAllUsersArgs;
+            const args = rawArgs as unknown as args.ListAllUsersArgs;
             response = await notionClient.listAllUsers(
               args.start_cursor,
               args.page_size
@@ -168,8 +169,7 @@ function createServer(
           }
 
           case "notion_retrieve_user": {
-            const args = request.params
-              .arguments as unknown as args.RetrieveUserArgs;
+            const args = rawArgs as unknown as args.RetrieveUserArgs;
             if (!args.user_id) {
               throw new Error("Missing required argument: user_id");
             }
@@ -183,8 +183,7 @@ function createServer(
           }
 
           case "notion_query_database": {
-            const args = request.params
-              .arguments as unknown as args.QueryDatabaseArgs;
+            const args = rawArgs as unknown as args.QueryDatabaseArgs;
             if (!args.database_id) {
               throw new Error("Missing required argument: database_id");
             }
@@ -199,8 +198,7 @@ function createServer(
           }
 
           case "notion_create_database": {
-            const args = request.params
-              .arguments as unknown as args.CreateDatabaseArgs;
+            const args = rawArgs as unknown as args.CreateDatabaseArgs;
             response = await notionClient.createDatabase(
               args.parent,
               args.properties,
@@ -210,15 +208,13 @@ function createServer(
           }
 
           case "notion_retrieve_database": {
-            const args = request.params
-              .arguments as unknown as args.RetrieveDatabaseArgs;
+            const args = rawArgs as unknown as args.RetrieveDatabaseArgs;
             response = await notionClient.retrieveDatabase(args.database_id);
             break;
           }
 
           case "notion_update_database": {
-            const args = request.params
-              .arguments as unknown as args.UpdateDatabaseArgs;
+            const args = rawArgs as unknown as args.UpdateDatabaseArgs;
             response = await notionClient.updateDatabase(
               args.database_id,
               args.title,
@@ -229,8 +225,7 @@ function createServer(
           }
 
           case "notion_create_database_item": {
-            const args = request.params
-              .arguments as unknown as args.CreateDatabaseItemArgs;
+            const args = rawArgs as unknown as args.CreateDatabaseItemArgs;
             response = await notionClient.createDatabaseItem(
               args.database_id,
               args.properties
@@ -239,8 +234,7 @@ function createServer(
           }
 
           case "notion_create_comment": {
-            const args = request.params
-              .arguments as unknown as args.CreateCommentArgs;
+            const args = rawArgs as unknown as args.CreateCommentArgs;
 
             if (!args.parent && !args.discussion_id) {
               throw new Error(
@@ -257,8 +251,7 @@ function createServer(
           }
 
           case "notion_retrieve_comments": {
-            const args = request.params
-              .arguments as unknown as args.RetrieveCommentsArgs;
+            const args = rawArgs as unknown as args.RetrieveCommentsArgs;
             if (!args.block_id) {
               throw new Error("Missing required argument: block_id");
             }
@@ -271,7 +264,7 @@ function createServer(
           }
 
           case "notion_search": {
-            const args = request.params.arguments as unknown as args.SearchArgs;
+            const args = rawArgs as unknown as args.SearchArgs;
             response = await notionClient.search(
               args.query,
               args.filter,
@@ -287,8 +280,7 @@ function createServer(
         }
 
         // Check format parameter and return appropriate response
-        const requestedFormat =
-          (request.params.arguments as any)?.format || "markdown";
+        const requestedFormat = (rawArgs as any)?.format || "markdown";
 
         if (enableMarkdownConversion && requestedFormat === "markdown") {
           const markdown = await notionClient.toMarkdown(response);
